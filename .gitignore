@@ -1,0 +1,13 @@
+# Folders
+.gradle/
+build/
+captures/
+.idea/
+
+# Files
+*.iml
+.cxx/
+local.properties
+
+# Other
+.DS_Store
