@@ -14,15 +14,17 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.LatLng
+import pl.cdv.monsterradar.tracker.LocationTrackerSystem
 
 class MainActivity : AppCompatActivity() {
     private lateinit var mapView: MapView
     private lateinit var googleMap: GoogleMap
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var tracker : LocationTrackerSystem
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
-        private const val DEFAULT_ZOOM_LEVEL = 6f
+        const val DEFAULT_ZOOM_LEVEL = 6f
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +69,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        tracker.clear()
+    }
+
     @SuppressLint("MissingPermission")
     private fun moveToUserLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
@@ -75,6 +82,8 @@ class MainActivity : AppCompatActivity() {
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, DEFAULT_ZOOM_LEVEL))
             }
         }
+
+        LocationTrackerSystem(googleMap, fusedLocationClient)
     }
 
     override fun onRequestPermissionsResult(
