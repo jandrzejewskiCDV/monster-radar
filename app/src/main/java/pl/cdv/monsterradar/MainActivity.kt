@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -13,6 +15,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
+import com.google.android.gms.maps.model.AdvancedMarkerOptions
 import com.google.android.gms.maps.model.LatLng
 import pl.cdv.monsterradar.tracker.LocationTrackerSystem
 
@@ -45,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         mapView.getMapAsync { map ->
             googleMap = map
             enableMyLocation()
+            addAdvancedMarker()
         }
     }
 
@@ -98,5 +102,23 @@ class MainActivity : AppCompatActivity() {
                 enableMyLocation()
             }
         }
+    }
+
+    private fun addAdvancedMarker() {
+        val MARKER_POSITION = LatLng(-33.87365, 151.20689)
+
+        val sizeInDp = 60
+        val sizeInPx = (sizeInDp * resources.displayMetrics.density).toInt()
+
+        val imageView = ImageView(this).apply {
+            setImageResource(R.drawable.monster)
+            layoutParams = ViewGroup.LayoutParams(sizeInPx, sizeInPx)
+        }
+
+        val advancedMarkerOptions: AdvancedMarkerOptions = AdvancedMarkerOptions()
+            .position(MARKER_POSITION)
+            .iconView(imageView)
+
+        googleMap.addMarker(advancedMarkerOptions)
     }
 }
