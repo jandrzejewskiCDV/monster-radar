@@ -17,7 +17,8 @@ class MonsterViewModel : ViewModel() {
     private val _monsters = MutableLiveData<List<Monster>>(emptyList())
     val monsters: LiveData<List<Monster>> = _monsters
 
-    fun updateMonsters(target: LatLng, deltaTime: Float) {
+    fun updateMonsters(target: LatLng?, deltaTime: Float) {
+        if (target == null) return
         _monsters.value = _monsters.value?.map { monster ->
             monster.copy(
                 position = movementController.moveMonsterTowards(
@@ -54,9 +55,9 @@ class MonsterViewModel : ViewModel() {
         )
 
         addNewMonster(
-            name = "Chaser",
+            name = "Monster",
             spawnPosition = spawn,
-            speed = 2.0f,
+            speed = 10.0f,
             iconRes = R.drawable.monster
         )
     }

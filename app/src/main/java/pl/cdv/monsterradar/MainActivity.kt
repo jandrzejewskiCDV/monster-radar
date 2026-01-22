@@ -25,13 +25,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var tracker : LocationTrackerSystem
     private val monsterViewModel: MonsterViewModel by viewModels()
+    private val tickHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val monsterMarkers = mutableMapOf<String, MonsterMarker>()
-
     private var monstersSpawned = false
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
-        const val DEFAULT_ZOOM_LEVEL = 6f
+        const val DEFAULT_ZOOM_LEVEL = 15f
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,19 +80,28 @@ class MainActivity : AppCompatActivity() {
     private fun observeMonsters() {
         monsterViewModel.monsters.observe(this) { monsters ->
             monsters.forEach { monster ->
-                if (!monsterMarkers.containsKey(monster.id)) {
-                    monsterMarkers[monster.id] =
-                        MonsterMarker(this, googleMap, monster)
+                val existingMarker = monsterMarkers[monster.id]
+
+                if (existingMarker == null) {
+                    monsterMarkers[monster.id] = MonsterMarker(this, googleMap, monster)
                 } else {
-                    monsterMarkers[monster.id]?.updatePosition(monster.position)
+                    existingMarker.updatePosition(monster.position)
                 }
             }
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        tickHandler.post(tickRunnable)
+    }
+
     override fun onPause() {
         super.onPause()
-        tracker.clear()
+        if (::tracker.isInitialized) {
+            tracker.clear()
+        }
+        tickHandler.removeCallbacks(tickRunnable)
     }
 
     @SuppressLint("MissingPermission")
@@ -109,7 +118,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        LocationTrackerSystem(googleMap, fusedLocationClient)
+        tracker = LocationTrackerSystem(googleMap, fusedLocationClient)
     }
 
     override fun onRequestPermissionsResult(
@@ -123,6 +132,15 @@ class MainActivity : AppCompatActivity() {
                 // permission was granted
                 enableMyLocation()
             }
+        }
+    }
+
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            if (::tracker.isInitialized) {
+                monsterViewModel.updateMonsters(tracker.lastLocation, 1f)
+            }
+            tickHandler.postDelayed(this, 1000)
         }
     }
 }

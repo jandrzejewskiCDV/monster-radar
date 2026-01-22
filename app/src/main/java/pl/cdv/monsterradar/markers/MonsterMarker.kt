@@ -37,4 +37,10 @@ class MonsterMarker(
         monster.position = newPosition
         marker.position = newPosition
     }
+
+    companion object {
+        fun create(context: Context, map: GoogleMap, monster: Monster): MonsterMarker {
+            return MonsterMarker(context, map, monster)
+        }
+    }
 }

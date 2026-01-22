@@ -27,6 +27,8 @@ class LocationTrackerRequestLocationInvoker(
 
             val cameraUpdate = CameraUpdateFactory.newLatLngZoom(userLatLng, MainActivity.DEFAULT_ZOOM_LEVEL)
             googleMap.animateCamera(cameraUpdate)
+            locationTrackerSystem.lastLocation = userLatLng
+            locationTrackerSystem.initialized = true
         }
     }
 
