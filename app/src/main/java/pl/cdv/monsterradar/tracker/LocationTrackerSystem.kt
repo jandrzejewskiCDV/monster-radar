@@ -8,35 +8,45 @@ class LocationTrackerSystem {
     private val googleMap: GoogleMap
     private val tracker: LocationTrackerRequestLocationInvoker
 
-    private var _state: LocationTrackerState = LocationTrackerState.FOLLOW_USER;
+    private var _state: LocationTrackerState = LocationTrackerState.FOLLOW_USER
 
     var state: LocationTrackerState
-        get() = this._state;
+        get() = this._state
         set(value) { this._state = value; }
 
     private var _lastLocation: LatLng? = null
 
     var lastLocation: LatLng?
-        get() = this._lastLocation;
+        get() = this._lastLocation
         set(value) { this._lastLocation = value; }
 
     private var _initialiazed: Boolean = false
 
     var initialized: Boolean
-        get() = this._initialiazed;
+        get() = this._initialiazed
         set(value) { this._initialiazed = value; }
 
     constructor(googleMap: GoogleMap, fusedLocationProviderClient: FusedLocationProviderClient){
-        this.googleMap = googleMap;
+        this.googleMap = googleMap
         listen()
 
         tracker = LocationTrackerRequestLocationInvoker(googleMap, this, fusedLocationProviderClient)
         tracker.startTrackingUser()
     }
 
-    private fun listen(){
-        this.googleMap.setOnCameraMoveStartedListener(LocationTrackerCameraUpdateHandler(this))
-        this.googleMap.setOnMyLocationButtonClickListener(LocationTrackerMyLocationUpdateHandler(this))
+    private fun listen() {
+        googleMap.setOnCameraMoveStartedListener { reason ->
+            if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE ||
+                reason == GoogleMap.OnCameraMoveStartedListener.REASON_API_ANIMATION
+            ) {
+                lastLocation = googleMap.cameraPosition.target
+            }
+        }
+
+        googleMap.setOnMyLocationButtonClickListener {
+            lastLocation = googleMap.cameraPosition.target
+            false
+        }
     }
 
     fun clear() {

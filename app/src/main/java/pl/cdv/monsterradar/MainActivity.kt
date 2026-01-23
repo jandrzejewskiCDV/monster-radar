@@ -5,6 +5,11 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.widget.TextView
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.Button
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -24,22 +29,42 @@ class MainActivity : AppCompatActivity() {
     private lateinit var googleMap: GoogleMap
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var tracker : LocationTrackerSystem
+    private lateinit var timerText: TextView
+    private lateinit var warningImage: ImageView
+    private lateinit var gameOverLayout: LinearLayout
+    private lateinit var resetButton: Button
+    
     private val monsterViewModel: MonsterViewModel by viewModels()
     private val tickHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val monsterMarkers = mutableMapOf<String, MonsterMarker>()
     private var monstersSpawned = false
+    private var elapsedSeconds = 0
+    private var isGameOver = false
+
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
-        const val DEFAULT_ZOOM_LEVEL = 15f
+        private const val PLAYER_HIT_DISTANCE_METERS = 5f
+        const val DEFAULT_ZOOM_LEVEL = 18f
+        private const val WARNING_DISTANCE_METERS = 67f
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        timerText = findViewById(R.id.timerText)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setupMap(savedInstanceState)
+
+        warningImage = findViewById(R.id.warningImage)
+
+        gameOverLayout = findViewById(R.id.gameOverLayout)
+        resetButton = findViewById(R.id.resetButton)
+
+        resetButton.setOnClickListener {
+            resetGame()
+        }
     }
 
     private fun setupMap(savedInstanceState: Bundle?) {
@@ -137,10 +162,97 @@ class MainActivity : AppCompatActivity() {
 
     private val tickRunnable = object : Runnable {
         override fun run() {
-            if (::tracker.isInitialized) {
-                monsterViewModel.updateMonsters(tracker.lastLocation, 1f)
+
+            if (isGameOver) return
+
+            elapsedSeconds++
+            timerText.text = String.format(
+                "%02d:%02d",
+                elapsedSeconds / 60,
+                elapsedSeconds % 60
+            )
+
+            val playerPos = tracker.lastLocation
+            if (playerPos != null && monstersSpawned) {
+
+                monsterViewModel.updateMonsters(playerPos, 1f)
+
+                val showWarning = monsterViewModel.isMonsterNearPlayer(
+                    playerPos,
+                    WARNING_DISTANCE_METERS
+                )
+                warningImage.visibility =
+                    if (showWarning) View.VISIBLE else View.GONE
+
+                if (monsterViewModel.isMonsterTouchingPlayer(
+                        playerPos,
+                        PLAYER_HIT_DISTANCE_METERS
+                    )
+                ) {
+                    endGame()
+                    return
+                }
+
+
             }
+
             tickHandler.postDelayed(this, 1000)
         }
     }
+
+    private fun endGame() {
+        isGameOver = true
+        tickHandler.removeCallbacks(tickRunnable)
+
+        if (::tracker.isInitialized) {
+            tracker.clear()
+        }
+
+        gameOverLayout.visibility = View.VISIBLE
+    }
+
+    private fun resetGame() {
+        // Hide Game Over UI
+        gameOverLayout.visibility = View.GONE
+
+        // Reset timer
+        elapsedSeconds = 0
+        timerText.text = "00:00"
+
+        // Remove monsters from map and ViewModel
+        clearMonsterMarkers()
+        monsterViewModel.clearMonsters()
+
+        // Reset flags
+        isGameOver = false
+        monstersSpawned = false
+
+        // Wait until we have a valid tracker location
+        val currentLocation = tracker.lastLocation
+        if (currentLocation != null) {
+            spawnMonstersAt(currentLocation)
+        } else {
+            // Tracker hasn't updated yet, delay spawning
+            tickHandler.postDelayed({
+                tracker.lastLocation?.let { spawnMonstersAt(it) }
+            }, 500) // small delay to allow location to be set
+        }
+
+        // Start ticking
+        tickHandler.post(tickRunnable)
+    }
+
+    private fun spawnMonstersAt(playerPos: LatLng) {
+        repeat(3) {
+            monsterViewModel.spawnMonsterNearPlayer(playerPos)
+        }
+        monstersSpawned = true
+    }
+
+    private fun clearMonsterMarkers() {
+        monsterMarkers.values.forEach { it.removeFromMap() }
+        monsterMarkers.clear()
+    }
+
+
 }

@@ -1,5 +1,6 @@
 package pl.cdv.monsterradar.viewmodels
 
+import android.location.Location
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -48,7 +49,7 @@ class MonsterViewModel : ViewModel() {
     }
 
     fun spawnMonsterNearPlayer(playerPos: LatLng) {
-        val randomOffset = Random.nextDouble(-0.001, 0.001)
+        val randomOffset = Random.nextDouble(-0.004, 0.004)
         val spawn = LatLng(
             playerPos.latitude + randomOffset,
             playerPos.longitude + randomOffset
@@ -60,6 +61,46 @@ class MonsterViewModel : ViewModel() {
             speed = 10.0f,
             iconRes = R.drawable.monster
         )
+    }
+
+    fun isMonsterNearPlayer(
+        playerPos: LatLng,
+        warningDistanceMeters: Float
+    ): Boolean {
+        val results = FloatArray(1)
+
+        return _monsters.value?.any { monster ->
+            Location.distanceBetween(
+                playerPos.latitude,
+                playerPos.longitude,
+                monster.position.latitude,
+                monster.position.longitude,
+                results
+            )
+            results[0] <= warningDistanceMeters
+        } ?: false
+    }
+
+    fun isMonsterTouchingPlayer(
+        playerPos: LatLng,
+        hitDistanceMeters: Float
+    ): Boolean {
+        val results = FloatArray(1)
+
+        return _monsters.value?.any { monster ->
+            Location.distanceBetween(
+                playerPos.latitude,
+                playerPos.longitude,
+                monster.position.latitude,
+                monster.position.longitude,
+                results
+            )
+            results[0] <= hitDistanceMeters
+        } ?: false
+    }
+
+    fun clearMonsters() {
+        _monsters.value = emptyList()
     }
 
 }
