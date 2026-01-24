@@ -20,22 +20,23 @@ class LocationTrackerSystem {
         get() = this._lastLocation
         set(value) { this._lastLocation = value; }
 
-    private var _initialiazed: Boolean = false
+    private var _initialized: Boolean = false
 
     var initialized: Boolean
-        get() = this._initialiazed
-        set(value) { this._initialiazed = value; }
+        get() = this._initialized
+        set(value) { this._initialized = value; }
 
     constructor(googleMap: GoogleMap, fusedLocationProviderClient: FusedLocationProviderClient){
         this.googleMap = googleMap
         listen()
 
         tracker = LocationTrackerRequestLocationInvoker(googleMap, this, fusedLocationProviderClient)
-        tracker.startTrackingUser()
     }
 
     private fun listen() {
-        googleMap.setOnCameraMoveStartedListener { reason ->
+        this.googleMap.setOnCameraMoveStartedListener(LocationTrackerCameraUpdateHandler(this))
+        this.googleMap.setOnMyLocationButtonClickListener(LocationTrackerMyLocationUpdateHandler(this))
+        /*googleMap.setOnCameraMoveStartedListener { reason ->
             if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE ||
                 reason == GoogleMap.OnCameraMoveStartedListener.REASON_API_ANIMATION
             ) {
@@ -46,7 +47,11 @@ class LocationTrackerSystem {
         googleMap.setOnMyLocationButtonClickListener {
             lastLocation = googleMap.cameraPosition.target
             false
-        }
+        }*/
+    }
+
+    fun startTrackingUser() {
+        tracker.startTrackingUser()
     }
 
     fun clear() {

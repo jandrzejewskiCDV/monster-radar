@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.util.Log
 import android.widget.TextView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -93,6 +94,7 @@ class MainActivity : AppCompatActivity() {
         ) {
             googleMap.isMyLocationEnabled = true
             moveToUserLocation()
+            tracker.startTrackingUser()
         } else {
             ActivityCompat.requestPermissions(
                 this,
@@ -118,6 +120,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (::tracker.isInitialized) {
+            tracker.startTrackingUser()
+        }
         tickHandler.post(tickRunnable)
     }
 
@@ -136,10 +141,7 @@ class MainActivity : AppCompatActivity() {
                 val userLatLng = LatLng(location.latitude, location.longitude)
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, DEFAULT_ZOOM_LEVEL))
                 if (!monstersSpawned) {
-                    repeat(3) {
-                        monsterViewModel.spawnMonsterNearPlayer(userLatLng)
-                    }
-                    monstersSpawned = true
+                    spawnMonstersAt(userLatLng)
                 }
             }
         }
@@ -161,9 +163,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val tickRunnable = object : Runnable {
+        @SuppressLint("DefaultLocale")
         override fun run() {
 
-            if (isGameOver) return
+            if (isGameOver){
+                println("Game over, ticking end")
+                return
+            }
+
+            println("Ticking")
 
             elapsedSeconds++
             timerText.text = String.format(
@@ -173,7 +181,13 @@ class MainActivity : AppCompatActivity() {
             )
 
             val playerPos = tracker.lastLocation
+
+            if(playerPos == null){
+                Log.d("ZOMBIE", "Player position is null")
+            }
+
             if (playerPos != null && monstersSpawned) {
+                Log.d("ZOMBIE", "Player position in tick runnable: $playerPos")
 
                 monsterViewModel.updateMonsters(playerPos, 1f)
 
@@ -192,8 +206,11 @@ class MainActivity : AppCompatActivity() {
                     endGame()
                     return
                 }
+            }
 
-
+            if(playerPos != null && !monstersSpawned){
+                spawnMonstersAt(playerPos)
+                Log.d("ZOMBIE", "Spawning zombies")
             }
 
             tickHandler.postDelayed(this, 1000)
@@ -227,16 +244,8 @@ class MainActivity : AppCompatActivity() {
         isGameOver = false
         monstersSpawned = false
 
-        // Wait until we have a valid tracker location
-        val currentLocation = tracker.lastLocation
-        if (currentLocation != null) {
-            spawnMonstersAt(currentLocation)
-        } else {
-            // Tracker hasn't updated yet, delay spawning
-            tickHandler.postDelayed({
-                tracker.lastLocation?.let { spawnMonstersAt(it) }
-            }, 500) // small delay to allow location to be set
-        }
+        //restart user tracker!
+        tracker.startTrackingUser()
 
         // Start ticking
         tickHandler.post(tickRunnable)

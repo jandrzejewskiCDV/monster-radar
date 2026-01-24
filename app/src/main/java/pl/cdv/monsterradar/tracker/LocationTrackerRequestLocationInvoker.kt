@@ -1,6 +1,8 @@
 package pl.cdv.monsterradar.tracker
 
+import android.location.Location
 import android.os.Looper
+import android.util.Log
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -18,18 +20,30 @@ class LocationTrackerRequestLocationInvoker(
 ){
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
-            if (locationTrackerSystem.state != LocationTrackerState.FOLLOW_USER) {
-                return;
-            }
-
             val lastLocation = locationResult.lastLocation ?: return
-            val userLatLng = LatLng(lastLocation.latitude, lastLocation.longitude)
-
-            val cameraUpdate = CameraUpdateFactory.newLatLngZoom(userLatLng, MainActivity.DEFAULT_ZOOM_LEVEL)
-            googleMap.animateCamera(cameraUpdate)
-            locationTrackerSystem.lastLocation = userLatLng
-            locationTrackerSystem.initialized = true
+            cacheLocation(lastLocation)
+            moveCamera()
         }
+    }
+
+    fun cacheLocation(location: Location){
+        val userLatLng = LatLng(location.latitude, location.longitude)
+
+        locationTrackerSystem.lastLocation = userLatLng
+        locationTrackerSystem.initialized = true
+
+        Log.d("ZOMBIE", "Location update caught: $userLatLng")
+    }
+
+    fun moveCamera(){
+        if (locationTrackerSystem.state != LocationTrackerState.FOLLOW_USER) {
+            return;
+        }
+
+        val latLng = locationTrackerSystem.lastLocation ?: return
+
+        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, MainActivity.DEFAULT_ZOOM_LEVEL)
+        googleMap.animateCamera(cameraUpdate)
     }
 
     fun startTrackingUser() {
@@ -46,11 +60,12 @@ class LocationTrackerRequestLocationInvoker(
             )
             googleMap.isMyLocationEnabled = true
         } catch (e: SecurityException) {
-            println("Failed tracking user")
+            Log.d("ZOMBIE", "Failed tracking updates")
         }
     }
 
     fun clear(){
         fusedLocationClient.removeLocationUpdates(locationCallback)
+        Log.d("ZOMBIE", "Location tracker will from now on, not receive updates")
     }
 }
