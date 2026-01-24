@@ -9,6 +9,10 @@ import pl.cdv.monsterradar.R
 import pl.cdv.monsterradar.monsters.Monster
 import pl.cdv.monsterradar.monsters.MonsterMovementController
 import java.util.UUID
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 class MonsterViewModel : ViewModel() {
@@ -49,10 +53,23 @@ class MonsterViewModel : ViewModel() {
     }
 
     fun spawnMonsterNearPlayer(playerPos: LatLng) {
-        val randomOffset = Random.nextDouble(-0.004, 0.004)
+        val minRadius = 0.002
+        val maxRadius = 0.004
+
+        val theta = Random.nextDouble(0.0, 2 * PI)
+
+
+        val minSq = minRadius * minRadius
+        val maxSq = maxRadius * maxRadius
+        val r = sqrt(Random.nextDouble(minSq, maxSq))
+
+        val offsetLat = r * cos(theta)
+
+        val offsetLng = (r * sin(theta)) / cos(Math.toRadians(playerPos.latitude))
+
         val spawn = LatLng(
-            playerPos.latitude + randomOffset,
-            playerPos.longitude + randomOffset
+            playerPos.latitude + offsetLat,
+            playerPos.longitude + offsetLng
         )
 
         addNewMonster(

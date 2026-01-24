@@ -186,6 +186,11 @@ class MainActivity : AppCompatActivity() {
                 Log.d("ZOMBIE", "Player position is null")
             }
 
+            if(playerPos != null && elapsedSeconds % 10 == 0){
+                spawnMonstersAt(playerPos)
+                Log.d("ZOMBIE", "Spawned next wave of zombies.")
+            }
+
             if (playerPos != null && monstersSpawned) {
                 Log.d("ZOMBIE", "Player position in tick runnable: $playerPos")
 
