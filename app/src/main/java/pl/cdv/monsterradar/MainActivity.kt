@@ -117,13 +117,8 @@ class MainActivity : AppCompatActivity() {
     private fun observeMonsters() {
         monsterViewModel.monsters.observe(this) { monsters ->
             monsters.forEach { monster ->
-                val existingMarker = monsterMarkers[monster.id]
-
-                if (existingMarker == null) {
-                    monsterMarkers[monster.id] = MonsterMarker(this, googleMap, monster)
-                } else {
-                    existingMarker.updatePosition(monster.position)
-                }
+                val existingMarker = monsterMarkers.computeIfAbsent(monster.id, { MonsterMarker(this, googleMap, monster) })
+                existingMarker.updatePosition(monster.position)
             }
         }
     }
