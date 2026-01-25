@@ -2,6 +2,7 @@ package pl.cdv.monsterradar
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.widget.TextView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Button
+import android.widget.Toast
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var warningImage: ImageView
     private lateinit var gameOverLayout: LinearLayout
     private lateinit var resetButton: Button
+    private lateinit var shareButton: Button // Added for share feature
     
     private val monsterViewModel: MonsterViewModel by viewModels()
     private val tickHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -48,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         private const val PLAYER_HIT_DISTANCE_METERS = 5f
         const val DEFAULT_ZOOM_LEVEL = 18f
         private const val WARNING_DISTANCE_METERS = 67f
+        private const val TOAST_INTERVAL_SECONDS = 5 // New constant for toast interval
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,9 +66,15 @@ class MainActivity : AppCompatActivity() {
 
         gameOverLayout = findViewById(R.id.gameOverLayout)
         resetButton = findViewById(R.id.resetButton)
-
+        
         resetButton.setOnClickListener {
             resetGame()
+        }
+
+        // Initialize share button and set listener
+        shareButton = findViewById(R.id.shareButton)
+        shareButton.setOnClickListener {
+            shareSurvivalTime()
         }
     }
 
@@ -196,6 +206,11 @@ class MainActivity : AppCompatActivity() {
 
                 monsterViewModel.updateMonsters(playerPos, 1f)
 
+                // Add toast logic here, running every 5 seconds
+                if (elapsedSeconds % TOAST_INTERVAL_SECONDS == 0) {
+                    showZombieStatusToast(playerPos)
+                }
+
                 val showWarning = monsterViewModel.isMonsterNearPlayer(
                     playerPos,
                     WARNING_DISTANCE_METERS
@@ -268,5 +283,84 @@ class MainActivity : AppCompatActivity() {
         monsterMarkers.clear()
     }
 
+    // New function to handle sharing the survival time
+    private fun shareSurvivalTime() {
+        val survivalTime = timerText.text
+        val shareIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, "I survived the monster apocalypse for $survivalTime! Can you beat my time?")
+            type = "text/plain"
+        }
+        startActivity(Intent.createChooser(shareIntent, "Share your survival time"))
+    }
+    
+    // New function to show toast with zombie status
+    private fun showZombieStatusToast(playerPos: LatLng) {
+        val monsters = monsterViewModel.monsters.value ?: emptyList()
+        val approachingMonsters = monsters.size // Assume all monsters that have spawned are "approaching"
+        var nearestMonsterLatLng: LatLng? = null
+        var minDistance = Float.MAX_VALUE
+        
+        // Convert player LatLng to Location
+        val playerLocation = Location("").apply {
+            latitude = playerPos.latitude
+            longitude = playerPos.longitude
+        }
 
+        // Find the nearest monster
+        monsters.forEach { monster ->
+            val monsterLocation = Location("").apply {
+                latitude = monster.position.latitude
+                longitude = monster.position.longitude
+            }
+            // distanceTo requires a Location object
+            val distance = playerLocation.distanceTo(monsterLocation)
+            if (distance < minDistance) {
+                minDistance = distance
+                nearestMonsterLatLng = monster.position
+            }
+        }
+
+        val toastMessage: String
+        if (approachingMonsters > 0 && nearestMonsterLatLng != null) {
+            val nearestMonsterLocation = Location("").apply {
+                latitude = nearestMonsterLatLng!!.latitude
+                longitude = nearestMonsterLatLng!!.longitude
+            }
+            
+            // Calculate the bearing (direction) from the player to the nearest monster
+            val bearing = playerLocation.bearingTo(nearestMonsterLocation)
+            val direction = bearingToDirection(bearing)
+            
+            // Convert distance to a human-readable format (e.g., meters)
+            val distanceString = if (minDistance < 1000) 
+                "${minDistance.toInt()} meters" 
+            else 
+                "${"%.1f".format(minDistance / 1000)} km"
+                
+            toastMessage = "$approachingMonsters zombies approaching! Nearest one is $distanceString away from the $direction."
+        } else {
+            toastMessage = "No zombies detected nearby. Stay safe!"
+        }
+
+        Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show()
+    }
+    
+    // Helper function to convert bearing to a cardinal direction string
+    private fun bearingToDirection(bearing: Float): String {
+        // Adjust bearing to be 0-360 range
+        val normalizedBearing = (bearing + 360) % 360
+        
+        return when {
+            normalizedBearing in 337.5..360.0 || normalizedBearing in 0.0..22.5 -> "North"
+            normalizedBearing in 22.5..67.5 -> "North-East"
+            normalizedBearing in 67.5..112.5 -> "East"
+            normalizedBearing in 112.5..157.5 -> "South-East"
+            normalizedBearing in 157.5..202.5 -> "South"
+            normalizedBearing in 202.5..247.5 -> "South-West"
+            normalizedBearing in 247.5..292.5 -> "West"
+            normalizedBearing in 292.5..337.5 -> "North-West"
+            else -> "Unknown Direction"
+        }
+    }
 }
