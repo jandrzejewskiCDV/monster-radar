@@ -76,7 +76,7 @@ class MonsterViewModel : ViewModel() {
             name = "Monster",
             spawnPosition = spawn,
             speed = 10.0f,
-            iconRes = R.drawable.monster
+            iconRes = R.drawable.monster_anim
         )
     }
 
