@@ -8,14 +8,13 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.AdvancedMarkerOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
-import pl.cdv.monsterradar.monsters.Monster
+import pl.cdv.monsterradar.model.Monster
 
 class MonsterMarker(
     context: Context,
     googleMap: GoogleMap,
     private val monster: Monster
 ) {
-
     private val marker: Marker
 
     init {
@@ -23,14 +22,9 @@ class MonsterMarker(
         val sizeInPx = (sizeInDp * context.resources.displayMetrics.density).toInt()
 
         val imageView = ImageView(context).apply {
-            // Set the resource (can be a static PNG or our new monster_anim XML)
             setImageResource(monster.iconRes)
             layoutParams = ViewGroup.LayoutParams(sizeInPx, sizeInPx)
-
-            // If the drawable is an animation, start it
-            post {
-                (drawable as? AnimationDrawable)?.start()
-            }
+            post { (drawable as? AnimationDrawable)?.start() }
         }
 
         val options = AdvancedMarkerOptions()
@@ -47,11 +41,5 @@ class MonsterMarker(
 
     fun removeFromMap() {
         marker.remove()
-    }
-
-    companion object {
-        fun create(context: Context, map: GoogleMap, monster: Monster): MonsterMarker {
-            return MonsterMarker(context, map, monster)
-        }
     }
 }

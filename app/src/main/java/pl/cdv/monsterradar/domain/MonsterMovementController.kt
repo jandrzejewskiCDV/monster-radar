@@ -1,7 +1,8 @@
-package pl.cdv.monsterradar.monsters
+package pl.cdv.monsterradar.domain
 
 import android.location.Location
 import com.google.android.gms.maps.model.LatLng
+import pl.cdv.monsterradar.model.Monster
 
 class MonsterMovementController {
 
@@ -10,14 +11,11 @@ class MonsterMovementController {
         target: LatLng,
         deltaTimeSeconds: Float
     ): LatLng {
-
-        val distanceToMove =
-            monster.speedMetersPerSecond * deltaTimeSeconds
-
+        val distanceToMove = monster.speedMetersPerSecond * deltaTimeSeconds
         return monster.position.moveTowards(target, distanceToMove.toDouble())
     }
 
-    fun LatLng.moveTowards(
+    private fun LatLng.moveTowards(
         target: LatLng,
         distanceMeters: Double
     ): LatLng {

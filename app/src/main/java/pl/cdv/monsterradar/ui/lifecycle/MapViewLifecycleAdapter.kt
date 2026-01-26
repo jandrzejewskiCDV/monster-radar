@@ -1,4 +1,4 @@
-package pl.cdv.monsterradar
+package pl.cdv.monsterradar.ui.lifecycle
 
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner

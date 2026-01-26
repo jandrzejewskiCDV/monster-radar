@@ -1,4 +1,4 @@
-package pl.cdv.monsterradar.monsters
+package pl.cdv.monsterradar.model
 
 import com.google.android.gms.maps.model.LatLng
 
