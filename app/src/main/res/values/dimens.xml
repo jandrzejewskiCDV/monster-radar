@@ -1,0 +1,6 @@
+<resources>
+    <item name="player_hit_distance" format="float" type="dimen">5.0</item>
+    <item name="warning_distance" format="float" type="dimen">67.0</item>
+    <integer name="toast_interval_seconds">5</integer>
+    <integer name="spawn_wave_interval_seconds">10</integer>
+</resources>

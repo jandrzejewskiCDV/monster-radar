@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import pl.cdv.monsterradar.location.PlayerLocationTracker
 import pl.cdv.monsterradar.ui.lifecycle.MapViewLifecycleAdapter
 import pl.cdv.monsterradar.ui.renderer.MonsterMapRenderer
+import pl.cdv.monsterradar.util.ResourceProvider
 import pl.cdv.monsterradar.viewmodel.GameViewModel
 
 class MainActivity : AppCompatActivity() {
@@ -42,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var locationTracker: PlayerLocationTracker? = null
     private var mapRenderer: MonsterMapRenderer? = null
+    private lateinit var resourceProvider: ResourceProvider
 
     private val gameViewModel: GameViewModel by viewModels()
 
@@ -53,6 +55,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        resourceProvider = ResourceProvider(this)
+        gameViewModel.initResources(resourceProvider)
 
         initializeViews()
         initializeLocation()
@@ -193,6 +198,7 @@ class MainActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_TEXT, message)
             type = "text/plain"
         }
-        startActivity(Intent.createChooser(shareIntent, "Share your survival time"))
+        val chooserTitle = resourceProvider.getString(R.string.broadcast_status)
+        startActivity(Intent.createChooser(shareIntent, chooserTitle))
     }
 }

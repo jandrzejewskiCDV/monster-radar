@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Monster Radar</string>
+
+    <string name="zombie_status_message">%1$d monsters approaching! Nearest one is %2$s away from the %3$s.</string>
+    <string name="no_zombies_message">No monsters detected nearby. Stay safe!</string>
+    <string name="share_message">I survived the monster apocalypse for %1$s! Can you beat my time?</string>
+
+    <string name="game_over">SIGNAL LOST</string>
+    <string name="game_over_subtext">The monsters have breached your location.</string>
+    <string name="reboot_radar">REBOOT RADAR</string>
+    <string name="broadcast_status">BROADCAST STATUS</string>
 </resources>

@@ -7,22 +7,18 @@ import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import pl.cdv.monsterradar.R
 import pl.cdv.monsterradar.domain.DistanceCalculator
 import pl.cdv.monsterradar.model.GameState
 import pl.cdv.monsterradar.model.Monster
 import pl.cdv.monsterradar.repository.MonsterRepository
+import pl.cdv.monsterradar.util.ResourceProvider
 
 class GameViewModel : ViewModel() {
 
-    companion object {
-        private const val PLAYER_HIT_DISTANCE_METERS = 5f
-        private const val WARNING_DISTANCE_METERS = 67f
-        private const val TOAST_INTERVAL_SECONDS = 5
-        private const val SPAWN_WAVE_INTERVAL_SECONDS = 10
-    }
-
     private val repository = MonsterRepository()
     private val tickHandler = Handler(Looper.getMainLooper())
+    private var resourceProvider: ResourceProvider? = null
 
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
@@ -39,6 +35,10 @@ class GameViewModel : ViewModel() {
             onTick()
             tickHandler.postDelayed(this, 1000)
         }
+    }
+
+    fun initResources(provider: ResourceProvider) {
+        this.resourceProvider = provider
     }
 
     fun setPlayerLocationProvider(provider: () -> LatLng?) {
@@ -69,42 +69,57 @@ class GameViewModel : ViewModel() {
         var newState = currentState.copy(elapsedSeconds = newElapsedSeconds)
 
         if (playerPos != null) {
-            //to separate function spawn initial wave
-            if (!currentState.monstersSpawned) {
-                repository.spawnWave(playerPos)
-                newState = newState.copy(monstersSpawned = true)
-            }
-
-            //to seperate function called "spawn new waves"
-            if (newElapsedSeconds % SPAWN_WAVE_INTERVAL_SECONDS == 0) {
-                repository.spawnWave(playerPos)
-            }
-
-            //update monster positions
-            repository.updatePositions(playerPos, 1f)
-
-            //show warnings
-            val showWarning = repository.isAnyMonsterWithinDistance(playerPos, WARNING_DISTANCE_METERS)
-            newState = newState.copy(showWarning = showWarning)
-
-            if (newElapsedSeconds % TOAST_INTERVAL_SECONDS == 0) {
-                val message = generateZombieStatusMessage(playerPos)
-                newState = newState.copy(zombieStatusMessage = message)
-            } else {
-                newState = newState.copy(zombieStatusMessage = null)
-            }
-            //this whole thingy
-
-            //detectGameOver
-            if (repository.isAnyMonsterWithinDistance(playerPos, PLAYER_HIT_DISTANCE_METERS)) {
-                newState = newState.copy(isGameOver = true)
-                tickHandler.removeCallbacks(tickRunnable)
-            }
+            newState = spawnInitialWave(playerPos, newState)
+            spawnNewWaves(playerPos, newElapsedSeconds)
+            updateMonsterPositions(playerPos)
+            newState = showWarnings(playerPos, newElapsedSeconds, newState)
+            newState = detectGameOver(playerPos, newState)
         }
 
         _gameState.value = newState
     }
 
+    private fun spawnInitialWave(playerPos: LatLng, state: GameState): GameState {
+        if (!state.monstersSpawned) {
+            repository.spawnWave(playerPos)
+            return state.copy(monstersSpawned = true)
+        }
+        return state
+    }
+
+    private fun spawnNewWaves(playerPos: LatLng, elapsedSeconds: Int) {
+        val interval = resourceProvider?.getInteger(R.integer.spawn_wave_interval_seconds) ?: 10
+        if (elapsedSeconds % interval == 0) {
+            repository.spawnWave(playerPos)
+        }
+    }
+
+    private fun updateMonsterPositions(playerPos: LatLng) {
+        repository.updatePositions(playerPos, 1f)
+    }
+
+    private fun showWarnings(playerPos: LatLng, elapsedSeconds: Int, state: GameState): GameState {
+        val warningDist = resourceProvider?.getFloat(R.dimen.warning_distance) ?: 67f
+        val toastInterval = resourceProvider?.getInteger(R.integer.toast_interval_seconds) ?: 5
+        
+        val showWarning = repository.isAnyMonsterWithinDistance(playerPos, warningDist)
+        val message = if (elapsedSeconds % toastInterval == 0) {
+            generateZombieStatusMessage(playerPos)
+        } else {
+            null
+        }
+        return state.copy(showWarning = showWarning, zombieStatusMessage = message)
+    }
+
+    private fun detectGameOver(playerPos: LatLng, state: GameState): GameState {
+        val hitDist = resourceProvider?.getFloat(R.dimen.player_hit_distance) ?: 5f
+        if (repository.isAnyMonsterWithinDistance(playerPos, hitDist)) {
+            tickHandler.removeCallbacks(tickRunnable)
+            return state.copy(isGameOver = true)
+        }
+        return state
+    }
+    
     private fun generateZombieStatusMessage(playerPos: LatLng): String {
         val monsterList = repository.monsters.value
         val nearestInfo = repository.findNearestMonster(playerPos)
@@ -115,14 +130,19 @@ class GameViewModel : ViewModel() {
             val direction = DistanceCalculator.bearingToDirection(bearing)
             val distanceString = DistanceCalculator.formatDistance(distance)
             
-            "${monsterList.size} zombies approaching! Nearest one is $distanceString away from the $direction."
+            resourceProvider?.getString(
+                R.string.zombie_status_message, 
+                monsterList.size, 
+                distanceString, 
+                direction
+            ) ?: ""
         } else {
-            "No zombies detected nearby. Stay safe!"
+            resourceProvider?.getString(R.string.no_zombies_message) ?: ""
         }
     }
 
     fun generateShareMessage(survivalTime: String): String {
-        return "I survived the monster apocalypse for $survivalTime! Can you beat my time?"
+        return resourceProvider?.getString(R.string.share_message, survivalTime) ?: ""
     }
 
     override fun onCleared() {
